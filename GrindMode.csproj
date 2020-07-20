@@ -7,8 +7,8 @@
     <ProjectGuid>{38639F8C-35A1-4BF2-91E8-817FC7678224}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>IntroSkip</RootNamespace>
-    <AssemblyName>IntroSkip</AssemblyName>
+    <RootNamespace>AudicaModding</RootNamespace>
+    <AssemblyName>GrindMode</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
