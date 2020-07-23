@@ -28,17 +28,31 @@ namespace AudicaModding
         static public bool includeChainSustainBreak = false;
         static public bool reportLastChainNode = false;
         static public bool quickButtons = false;
+        static public bool highscoreMode = false;
+        static public bool highscoreIsSetup = false;
+        static public bool waitForRestart = false;
+        static public bool skipSetScore = false;
+        static public bool cuesSet = false;
 
         static public int missCount = 0;     
         static public int allowedMissCount = 10;
  
         static private List<SongCues.Cue> reportedCues = new List<SongCues.Cue>();
         static private SongCues.Cue lastTarget = new SongCues.Cue(0, 0, 0, 0, Target.TargetHandType.None, Target.TargetBehavior.Standard, Vector2.zero);
+        static private int sustainTickLH = 0;
+        static private int sustainTickRH = 0;
 
         static public bool chainLH = false;
         static public bool chainRH = false;
 
         static public HmxAudioEmitter audiocomponent = null;
+
+        static private List<SongCues.Cue> songCues = new List<SongCues.Cue>();
+
+        static public int highscore = 0;
+        static public int currentScore = 0;
+        static public int currentStreak = 0;
+        static public int currentMultiplier = 0;
         #endregion
         #region Settings Menu
         public static OptionsMenu optionMenu;     
@@ -48,7 +62,8 @@ namespace AudicaModding
         public static OptionsMenuButton toggleButtonIncludeBreaks = null;
         public static OptionsMenuButton toggleButtonAllowedMissCount = null;
         public static OptionsMenuButton toggleButtonQuickButtons = null;
-      
+        public static OptionsMenuButton toggleButtonBehavior = null;
+
         public static bool menuSpawned = false;
 
 
@@ -58,12 +73,14 @@ namespace AudicaModding
         static public OptionsMenuButton grindModeButton = null;
         static public OptionsMenuButton autoSkipButton = null;
         static public OptionsMenuButton allowedMissCountButton = null;
+        static public OptionsMenuButton behaviorButton = null;
 
         static private Vector3 launchPanelButtonScale = new Vector3(1f, 1f, 1f);
 
         static public bool grindButtonCreated = false;
         static public bool autoSkipButtonCreated = false;
         static public bool allowedMissCountButtonCreated = false;
+        static public bool behaviorButtonCreated = false;
         #endregion
         #region InGame Button
         static public GameObject menuButton = null;
@@ -93,6 +110,7 @@ namespace AudicaModding
             ModPrefs.RegisterPrefBool("GrindMode", "breaks", false);
             ModPrefs.RegisterPrefInt("GrindMode", "missCount", 0);
             ModPrefs.RegisterPrefBool("GrindMode", "quickButtons", false);
+            ModPrefs.RegisterPrefBool("GrindMode", "highscoreMode", false);
             
         }
 
@@ -103,6 +121,7 @@ namespace AudicaModding
             includeChainSustainBreak = ModPrefs.GetBool("GrindMode", "breaks");
             allowedMissCount = ModPrefs.GetInt("GrindMode", "missCount");
             quickButtons = ModPrefs.GetBool("GrindMode", "quickButtons");
+            highscoreMode = ModPrefs.GetBool("GrindMode", "highscoreMode");
 
         }
 
@@ -113,7 +132,7 @@ namespace AudicaModding
             ModPrefs.SetBool("GrindMode", "breaks", includeChainSustainBreak);
             ModPrefs.SetInt("GrindMode", "missCount", allowedMissCount);
             ModPrefs.SetBool("GrindMode", "quickButtons", quickButtons);
-
+            ModPrefs.SetBool("GrindMode", "highscoreMode", highscoreMode);
 
         }
 
@@ -167,7 +186,8 @@ namespace AudicaModding
         }
 
         private static void RestartSong()
-        {      
+        {
+            waitForRestart = true;
             InGameUI.I.Restart();
             PlaySound();
             ResetVariables();
@@ -193,6 +213,7 @@ namespace AudicaModding
 
             autoSkipButton.gameObject.SetActive(active);
             grindModeButton.gameObject.SetActive(active);
+            behaviorButton.gameObject.SetActive(active);
             if (!grindMode) allowedMissCountButton.gameObject.SetActive(false);
             else allowedMissCountButton.gameObject.SetActive(active);           
                                
@@ -234,7 +255,9 @@ namespace AudicaModding
                 introSkipped = true;
                 skipQueued = false;
                 //Call this so the score gets validated
-                if(!KataConfig.I.practiceMode && !KataConfig.I.NoFail())
+                //MelonModLogger.Log("Is practice mode: " + KataConfig.I.practiceMode.ToString());
+                //MelonModLogger.Log("Is NofailKataConfig: " + KataConfig.I.NoFail()
+                if(!KataConfig.I.practiceMode)
                     ScoreKeeper.I.GetScoreValidity();
             }
         }
@@ -268,7 +291,6 @@ namespace AudicaModding
             #region Grind Button
             if (!grindButtonCreated)
             {
-                grindButtonCreated = true;
                 grindModeButton = UnityEngine.Object.Instantiate(launchButton);
                 grindModeButton.transform.localScale = launchPanelButtonScale;
                 UnityEngine.Object.Destroy(grindModeButton.transform.root.GetComponentInChildren<Localizer>());
@@ -282,7 +304,7 @@ namespace AudicaModding
                 {
                     grindMode = !grindMode;
                     string txt = grindMode ? "ON" : "OFF";
-                    allowedMissCountButton.gameObject.SetActive(grindMode);
+                    allowedMissCountButton.gameObject.SetActive(grindMode && !highscoreMode);
                     grindModeButton.label.text = "Grind Mode " + txt;
                     if (toggleButtonGrind is OptionsMenuButton) toggleButtonGrind.label.text = txt;
                 });
@@ -341,6 +363,30 @@ namespace AudicaModding
                 allowedMissCountButton.transform.position = new Vector3(7.317519f, 13.2f, 24.19168f);
                 allowedMissCountButton.gameObject.SetActive(false);
                 allowedMissCountButtonCreated = true;
+            }
+            #endregion
+            #region Behavior Button
+            if (!behaviorButtonCreated)
+            {
+                behaviorButton = UnityEngine.Object.Instantiate(launchButton);
+                behaviorButton.transform.localScale = launchPanelButtonScale;
+                UnityEngine.Object.Destroy(behaviorButton.transform.root.GetComponentInChildren<Localizer>());
+
+                TextMeshPro behaviorButtonText = behaviorButton.transform.root.GetComponentInChildren<TextMeshPro>();
+                behaviorButtonText.text = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+
+                behaviorButton.SelectedAction = null;
+                behaviorButton.IsChecked = null;
+                behaviorButton.SelectedAction = new Action(() =>
+                {
+                    highscoreMode = !highscoreMode;
+                    string txt = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+                    allowedMissCountButton.gameObject.SetActive(!highscoreMode && grindMode);
+                    behaviorButton.label.text = txt;
+                    if (toggleButtonBehavior is OptionsMenuButton) toggleButtonBehavior.label.text = txt;
+                });
+                behaviorButton.transform.position = new Vector3(0, 15.2f, 24.19168f);
+                behaviorButtonCreated = true;
             }
             #endregion
             SetLaunchPanelButtonsActive(true);
@@ -463,10 +509,27 @@ namespace AudicaModding
                 null,
                 "Sets the allowed amount of misses before restarting");
             #endregion
+            #region Behavior
+            string toggleTextBehavior = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+            toggleButtonBehavior = optionMenu.AddButton
+                (1,
+                toggleTextBehavior,
+                new Action(() =>
+                {
+                    highscoreMode = !highscoreMode;
+                    string txt = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+                    SaveConfig();
+
+                    toggleButtonBehavior.label.text = txt;
+                    if (behaviorButtonCreated) behaviorButton.label.text = txt;
+                }),
+                null,
+                "Highscore fails the song after not being able to beat your current highscore. Standard will fail after a set amount of misses");
+            #endregion
             #region Quick Buttons
             string toggleTextQuickButtons = quickButtons ? "Quick Buttons ON" : "Quick Buttons OFF";
             toggleButtonQuickButtons = optionMenu.AddButton
-                (1,
+                (0,
                 toggleTextQuickButtons,
                 new Action(() =>
                 {
@@ -475,13 +538,106 @@ namespace AudicaModding
                     SaveConfig();                   
                 }),
                 null,
-                "Enables Quick Buttons for Auto Skip, Grind Mode, and Allowed Misses before starting a song");
+                "Enables Quick Buttons for Auto Skip, Grind Mode, Allowed Misses and ModeSwitch before starting a song");
             #endregion
 
             menuSpawned = true;
         }
 
-     
+        public static void SetHighscore(int _highscore)
+        {
+            highscoreIsSetup = true;
+            highscore = _highscore;
+        }
+
+        public static void SetCues(SongCues.Cue[] cues)
+        {
+            if (cuesSet) return;
+            cuesSet = true;
+            songCues = new List<SongCues.Cue>(cues);
+        }
+
+        public static void SetCurrentScore(int score, int streak, int multiplier)
+        {
+            if (waitForRestart) return;
+            
+            songCues.RemoveAt(0);
+            currentScore = score;
+            currentMultiplier = multiplier;
+            currentStreak = streak;
+            
+            CalculateMaxPossibleScore();
+        }
+
+        private static void CalculateMaxPossibleScore(bool debug = false)
+        {
+            int theoreticalStreak = currentStreak;
+            int theoreticalMaxScore = 0;
+            int theoreticalMultiplier = currentMultiplier;
+            foreach(SongCues.Cue cue in songCues)
+            {
+                int score = 0;
+                Target.TargetBehavior behavior = cue.behavior;
+
+                if (sustainTickRH > 0)
+                {
+                    if (cue.tick >= sustainTickRH)
+                    {
+                        sustainTickRH = 0;
+                        theoreticalMaxScore += (3000 * theoreticalMultiplier);
+                    }
+
+                }
+                if (sustainTickLH > 0)
+                {
+                    if (cue.tick >= sustainTickLH)
+                    {
+                        sustainTickLH = 0;
+                        theoreticalMaxScore += (3000 * theoreticalMultiplier);
+                    }
+
+                }
+
+                if (behavior != Target.TargetBehavior.Chain)
+                {
+                    theoreticalStreak += 1;
+                    if (theoreticalMultiplier < 4)
+                    {
+                        float mult = (theoreticalStreak / 10f);
+                        if ((mult % 1) == 0) theoreticalMultiplier += 1;
+                    }
+                }
+                
+                switch (behavior)
+                {
+                    case Target.TargetBehavior.Hold:
+                        if (cue.handType == Target.TargetHandType.Right) sustainTickRH = cue.tick + cue.tickLength;
+                        else sustainTickLH = cue.tick + cue.tickLength;
+                        break;
+                    case Target.TargetBehavior.Chain:
+                        score = 125;
+                        break;
+                    default:
+                        score = 2000;
+                        break;
+                }
+
+                score *= theoreticalMultiplier;
+                theoreticalMaxScore += score;
+
+            }
+            if (debug)
+            {
+                int sc = currentScore + theoreticalMaxScore;
+                MelonModLogger.Log("Max calculated score: " + sc.ToString());
+                MelonModLogger.Log("Real max score: " + StarThresholds.I.GetMaxRawScore(SongDataHolder.I.songData.songID, KataConfig.Difficulty.Expert).ToString());
+            }
+
+            if (currentScore + theoreticalMaxScore < highscore)
+            {
+                RestartSong();
+            }    
+        }
 
         public override void OnUpdate()
         {
@@ -530,6 +686,14 @@ namespace AudicaModding
             chainLH = false;
             chainRH = false;
             isPaused = false;
+
+            highscore = 0;
+            highscoreIsSetup = false;
+            currentScore = 0;
+            currentStreak = 0;
+            currentMultiplier = 0;
+            cuesSet = false;
+
             reportedCues.Clear();
         }
 

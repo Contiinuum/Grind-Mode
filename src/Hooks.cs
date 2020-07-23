@@ -23,12 +23,23 @@ namespace AudicaModding
         {
             private static void Prefix(AudioDriver __instance)
             {
+                if (AudicaMod.waitForRestart) AudicaMod.waitForRestart = false;
                 if (!KataConfig.I.practiceMode && (AudicaMod.skipQueued || AudicaMod.autoSkip))
                 {
                     AudicaMod.SkipIntro();
                 }
             }
 
+        }
+
+        [HarmonyPatch(typeof(SongCues), "LoadCues")]
+        private static class PatchLoadCues
+        {
+            private static void Postfix(SongCues __instance)
+            {
+                if(AudicaMod.grindMode && AudicaMod.highscoreMode)
+                    AudicaMod.SetCues(__instance.mCues.cues);
+            }
         }
 
         //Used mainly for creating and enabling/disabling buttons
@@ -52,8 +63,8 @@ namespace AudicaModding
                     }
                 }
                 else if (AudicaMod.grindButtonCreated || AudicaMod.autoSkipButtonCreated) MelonCoroutines.Start(AudicaMod.SetLaunchPanelButtonsActive(false, true));
-               
-                           
+
+
                 if (AudicaMod.introSkip && state == MenuState.State.SongPage && AudicaMod.menuButton is null) AudicaMod.CreateIntroSkipButton();
 
                 if (AudicaMod.introSkipButtonCreated)
@@ -62,7 +73,7 @@ namespace AudicaModding
                     else if (state == MenuState.State.Launched && (AudicaMod.autoSkip || KataConfig.I.practiceMode)) AudicaMod.SetIntroSkipButtonActive(false);
                 }
 
-                if(state == MenuState.State.Launched)
+                if (state == MenuState.State.Launched)
                 {
                     AudicaMod.ResetVariables();
                 }
@@ -78,7 +89,7 @@ namespace AudicaModding
         {
             private static void Postfix(PauseScreen __instance)
             {
-                if(AudicaMod.introSkip)
+                if (AudicaMod.introSkip)
                     AudicaMod.SetPaused(true);
             }
         }
@@ -117,14 +128,30 @@ namespace AudicaModding
         [HarmonyPatch(typeof(ScoreKeeper), "OnFailure", new Type[] { typeof(SongCues.Cue), typeof(bool), typeof(bool) })]
         private static class PatchScoreKeeperOnFailure
         {
-            private static void Postfix(ref SongCues.Cue cue)
+            private static void Postfix(ScoreKeeper __instance, ref SongCues.Cue cue)
             {
-                if (!AudicaMod.grindMode || KataConfig.I.NoFail()) return;
+                if (AudicaMod.waitForRestart) return;
+                if(AudicaMod.grindMode && AudicaMod.highscoreMode && !AudicaMod.highscoreIsSetup)
+                    AudicaMod.SetHighscore(ScoreKeeper.I.GetHighScore());
 
-                if(cue is null)
+                if (cue is null)
                 {
                     return;
                 }
+
+               
+                   
+                if (!AudicaMod.grindMode || KataConfig.I.NoFail()) return;
+
+                if (AudicaMod.highscoreMode)
+                {
+                    if (!AudicaMod.skipSetScore)
+                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier);
+
+                    AudicaMod.skipSetScore = !AudicaMod.skipSetScore;
+                    return;
+                }
+
                 if (!AudicaMod.includeChainSustainBreak)
                 {
                     if (cue.behavior == Target.TargetBehavior.Chain)
@@ -140,21 +167,38 @@ namespace AudicaModding
 
                 }
                 AudicaMod.ReportMiss(cue);
-                
+
             }
         }
 
         //Hook for reporting completed chains
-        [HarmonyPatch(typeof(ScoreKeeper), "OnSuccess", new Type[] { typeof(SongCues.Cue)})]
+        [HarmonyPatch(typeof(ScoreKeeper), "OnSuccess", new Type[] { typeof(SongCues.Cue) })]
         private static class PatchScoreKeeperOnSuccess
         {
-            private static void Postfix(ref SongCues.Cue cue)
+            private static void Postfix(ScoreKeeper __instance, ref SongCues.Cue cue)
             {
+
+              
+
+                if (!AudicaMod.grindMode || KataConfig.I.NoFail()) return;
+
+                if (AudicaMod.highscoreMode)
+                {
+                    if (!AudicaMod.highscoreIsSetup)
+                        AudicaMod.SetHighscore(ScoreKeeper.I.GetHighScore());
+
+                    if (!AudicaMod.skipSetScore)
+                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier);
+
+                    AudicaMod.skipSetScore = !AudicaMod.skipSetScore;
+                    return;
+                }
+
                 if (AudicaMod.chainLH)
                 {
                     if (cue.handType == Target.TargetHandType.Left) AudicaMod.chainLH = false;
                 }
-                else if(AudicaMod.chainRH)
+                else if (AudicaMod.chainRH)
                 {
                     if (cue.handType == Target.TargetHandType.Right) AudicaMod.chainRH = false;
                 }
@@ -169,10 +213,27 @@ namespace AudicaModding
             {
                 if (AudicaMod.introSkipped)
                 {
-                    if (__result == ScoreKeeper.ScoreValidity.Valid || __result == ScoreKeeper.ScoreValidity.NoFail) return true;
+
+                    //if (__result == ScoreKeeper.ScoreValidity.Valid || __result == ScoreKeeper.ScoreValidity.NoFail) return false;
                     __result = ScoreKeeper.ScoreValidity.Valid;
+                    __instance.mHasInvalidatedScore = false;
+                    return false;
                 }
                 return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(ScoreKeeper), "OnJump", new Type[] { typeof(float), typeof(float) })]
+        private static class PatchOnJump
+        {
+            private static bool Prefix()
+            {
+                if (AudicaMod.introSkipped && !KataConfig.I.practiceMode)
+                {
+                    return false;
+                }
+                else return true;
+                
             }
         }
     }
