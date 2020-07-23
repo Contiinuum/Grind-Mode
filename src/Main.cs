@@ -214,8 +214,8 @@ namespace AudicaModding
             autoSkipButton.gameObject.SetActive(active);
             grindModeButton.gameObject.SetActive(active);
             behaviorButton.gameObject.SetActive(active);
-            if (!grindMode) allowedMissCountButton.gameObject.SetActive(false);
-            else allowedMissCountButton.gameObject.SetActive(active);           
+            if(grindMode && !highscoreMode) allowedMissCountButton.gameObject.SetActive(active);
+            else allowedMissCountButton.gameObject.SetActive(false);  
                                
         }
 
