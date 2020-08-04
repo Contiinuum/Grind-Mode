@@ -145,10 +145,10 @@ namespace AudicaModding
 
                 if (AudicaMod.highscoreMode)
                 {
-                    if (!AudicaMod.skipSetScore)
-                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier);
+                    if (!AudicaMod.skipSetScoreMiss)
+                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue, true);
 
-                    AudicaMod.skipSetScore = !AudicaMod.skipSetScore;
+                    AudicaMod.skipSetScoreMiss = !AudicaMod.skipSetScoreMiss;
                     return;
                 }
 
@@ -187,10 +187,10 @@ namespace AudicaModding
                     if (!AudicaMod.highscoreIsSetup)
                         AudicaMod.SetHighscore(ScoreKeeper.I.GetHighScore());
 
-                    if (!AudicaMod.skipSetScore)
-                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier);
+                    if (!AudicaMod.skipSetScoreSuccess)
+                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue);
 
-                    AudicaMod.skipSetScore = !AudicaMod.skipSetScore;
+                    AudicaMod.skipSetScoreSuccess = !AudicaMod.skipSetScoreSuccess;
                     return;
                 }
 

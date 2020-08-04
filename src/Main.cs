@@ -31,7 +31,8 @@ namespace AudicaModding
         static public bool highscoreMode = false;
         static public bool highscoreIsSetup = false;
         static public bool waitForRestart = false;
-        static public bool skipSetScore = false;
+        static public bool skipSetScoreMiss = false;
+        static public bool skipSetScoreSuccess = false;
         static public bool cuesSet = false;
 
         static public int missCount = 0;     
@@ -41,6 +42,8 @@ namespace AudicaModding
         static private SongCues.Cue lastTarget = new SongCues.Cue(0, 0, 0, 0, Target.TargetHandType.None, Target.TargetBehavior.Standard, Vector2.zero);
         static private int sustainTickLH = 0;
         static private int sustainTickRH = 0;
+        static private bool chainLHHasUpcomingNode = false;
+        static private bool chainRHHasUpcomingNode = false;
 
         static public bool chainLH = false;
         static public bool chainRH = false;
@@ -251,7 +254,7 @@ namespace AudicaModding
         {
             if (GetCurrentTick() <= GetFirstTick() - 5760)
             {             
-                AudioDriver.I.JumpToTick(GetFirstTick() - 1920);
+                AudioDriver.I.JumpToTick(GetFirstTick() - 2880);
                 introSkipped = true;
                 skipQueued = false;
                 //Call this so the score gets validated
@@ -557,16 +560,111 @@ namespace AudicaModding
             songCues = new List<SongCues.Cue>(cues);
         }
 
-        public static void SetCurrentScore(int score, int streak, int multiplier)
+        public static void SetCurrentScore(int score, int streak, int multiplier, SongCues.Cue cue, bool miss = false)
         {
             if (waitForRestart) return;
+            if (cue.behavior == Target.TargetBehavior.Chain)
+            {
+                lastTarget = cue;
+                if(cue.nextCue.behavior == Target.TargetBehavior.Chain)
+                {
+
+                    return;
+                }
+                else
+                {
+                    if (chainLH && cue.handType == Target.TargetHandType.Left) chainLH = false;
+                    else if (chainRH && cue.handType == Target.TargetHandType.Right) chainRH = false;
+                    RemoveChainCues(cue.handType);
+                }
+            }
+
+            if (cue.behavior == Target.TargetBehavior.ChainStart)
+            {
+
+                if (cue.handType == Target.TargetHandType.Left)
+                {
+                    chainLH = true;
+                    chainLHHasUpcomingNode = true;
+                }
+                else
+                {
+                    chainRH = true;
+                    chainRHHasUpcomingNode = true;
+                }
+                    
+            }
+
+           
+            lastTarget = cue;
             
-            songCues.RemoveAt(0);
+            int length = songCues.Count - 1;
+            if (chainLH)
+            {
+                int index = 0;
+                for (int i = 0; i < length; i++)
+                {
+                    SongCues.Cue c = songCues[i];
+                    if (c.behavior == Target.TargetBehavior.Chain && c.handType == Target.TargetHandType.Left) index++;
+                    else
+                    {                      
+                        songCues.RemoveAt(index);
+                        break;
+                    }
+                }
+            }
+            else if (chainRH)
+            {
+                int index = 0;
+                for (int i = 0; i < length; i++)
+                {
+                    SongCues.Cue c = songCues[i];
+                    if (c.behavior == Target.TargetBehavior.Chain && c.handType == Target.TargetHandType.Right) index++;
+                    else
+                    {
+                        songCues.RemoveAt(index);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if(cue.behavior != Target.TargetBehavior.Chain) songCues.RemoveAt(0);
+            }
+
+
             currentScore = score;
             currentMultiplier = multiplier;
             currentStreak = streak;
             
             CalculateMaxPossibleScore();
+        }
+
+        private static void RemoveChainCues(Target.TargetHandType handType)
+        {      
+            int length = songCues.Count - 1;
+            int index = 0;
+            for(int i = 0; i < length; i++)
+            {
+                SongCues.Cue cue = songCues[index];
+                if(cue.handType == handType)
+                {
+                    if (cue.behavior == Target.TargetBehavior.Chain)
+                    {
+                        songCues.RemoveAt(index);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                        
+                }
+                else
+                {
+                    index++;
+                }
+            }
+           
         }
 
         private static void CalculateMaxPossibleScore(bool debug = false)
