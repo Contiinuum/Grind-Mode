@@ -23,10 +23,10 @@ namespace AudicaModding
         {
             private static void Prefix(AudioDriver __instance)
             {
-                if (AudicaMod.waitForRestart) AudicaMod.waitForRestart = false;
-                if (!KataConfig.I.practiceMode && (AudicaMod.skipQueued || AudicaMod.autoSkip))
+                if (GrindMode.waitForRestart) GrindMode.waitForRestart = false;
+                if (!KataConfig.I.practiceMode && (GrindMode.skipQueued || GrindMode.autoSkip))
                 {
-                    AudicaMod.SkipIntro();
+                    GrindMode.SkipIntro();
                 }
             }
 
@@ -37,8 +37,8 @@ namespace AudicaModding
         {
             private static void Postfix(SongCues __instance)
             {
-                if(AudicaMod.grindMode && AudicaMod.highscoreMode)
-                    AudicaMod.SetCues(__instance.mCues.cues);
+                if(GrindMode.grindMode && GrindMode.highscoreMode)
+                    GrindMode.SetCues(__instance.mCues.cues);
             }
         }
 
@@ -48,37 +48,39 @@ namespace AudicaModding
         {
             private static void Postfix(MenuState __instance, ref MenuState.State state)
             {
-                if (AudicaMod.quickButtons)
+
+                if (GrindMode.quickButtons)
                 {
-                    if (state == MenuState.State.LaunchPage && !AudicaMod.grindButtonCreated && !AudicaMod.autoSkipButtonCreated && !AudicaMod.allowedMissCountButtonCreated)
+                    if (state == MenuState.State.LaunchPage && !GrindMode.grindButtonCreated && !GrindMode.autoSkipButtonCreated && !GrindMode.allowedMissCountButtonCreated)
                     {
-                        MelonCoroutines.Start(AudicaMod.AddLaunchPanelButtons());
+                        MelonCoroutines.Start(GrindMode.AddLaunchPanelButtons());
 
                     }
-                    else if (AudicaMod.grindButtonCreated || AudicaMod.autoSkipButtonCreated)
+                    else if (GrindMode.grindButtonCreated || GrindMode.autoSkipButtonCreated)
                     {
-                        if (state == MenuState.State.LaunchPage) MelonCoroutines.Start(AudicaMod.SetLaunchPanelButtonsActive(true));
-                        else if (state == MenuState.State.Launching) MelonCoroutines.Start(AudicaMod.SetLaunchPanelButtonsActive(false, true));
-                        else if (state != MenuState.State.Launched) MelonCoroutines.Start(AudicaMod.SetLaunchPanelButtonsActive(false));
+                        if (state == MenuState.State.LaunchPage) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(true));
+                        else if (state != MenuState.State.Launched) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false));
+                       // else if (state == MenuState.State.Launching) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false, true));
+
                     }
                 }
-                else if (AudicaMod.grindButtonCreated || AudicaMod.autoSkipButtonCreated) MelonCoroutines.Start(AudicaMod.SetLaunchPanelButtonsActive(false, true));
+                else if (GrindMode.grindButtonCreated || GrindMode.autoSkipButtonCreated) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false, true));
 
 
-                if (AudicaMod.introSkip && state == MenuState.State.SongPage && AudicaMod.menuButton is null) AudicaMod.CreateIntroSkipButton();
+                if (GrindMode.introSkip && state == MenuState.State.SongPage && GrindMode.menuButton is null) GrindMode.CreateIntroSkipButton();
 
-                if (AudicaMod.introSkipButtonCreated)
+                if (GrindMode.introSkipButtonCreated)
                 {
-                    if (state != MenuState.State.Launched || state != MenuState.State.Launching) AudicaMod.SetIntroSkipButtonActive(false);
-                    else if (state == MenuState.State.Launched && (AudicaMod.autoSkip || KataConfig.I.practiceMode)) AudicaMod.SetIntroSkipButtonActive(false);
+                    if (state != MenuState.State.Launched || state != MenuState.State.Launching) GrindMode.SetIntroSkipButtonActive(false);
+                    else if (state == MenuState.State.Launched && (GrindMode.autoSkip || KataConfig.I.practiceMode)) GrindMode.SetIntroSkipButtonActive(false);
                 }
 
                 if (state == MenuState.State.Launched)
                 {
-                    AudicaMod.ResetVariables();
+                    GrindMode.ResetVariables();
                 }
 
-                if (AudicaMod.audiocomponent is null && state == MenuState.State.SongPage) AudicaMod.GetAudioComponent();
+                if (GrindMode.audiocomponent is null && state == MenuState.State.SongPage) GrindMode.GetAudioComponent();
 
             }
 
@@ -89,8 +91,8 @@ namespace AudicaModding
         {
             private static void Postfix(PauseScreen __instance)
             {
-                if (AudicaMod.introSkip)
-                    AudicaMod.SetPaused(true);
+                if (GrindMode.introSkip)
+                    GrindMode.SetPaused(true);
             }
         }
 
@@ -99,8 +101,8 @@ namespace AudicaModding
         {
             private static void Prefix(PauseScreen __instance)
             {
-                if (AudicaMod.introSkip)
-                    AudicaMod.SetPaused(false);
+                if (GrindMode.introSkip)
+                    GrindMode.SetPaused(false);
             }
         }
 
@@ -109,7 +111,7 @@ namespace AudicaModding
         {
             private static void Prefix(InGameUI __instance)
             {
-                AudicaMod.ResetVariables();
+                GrindMode.ResetVariables();
             }
         }
 
@@ -118,8 +120,8 @@ namespace AudicaModding
         {
             private static void Postfix(OptionsMenu __instance, ref OptionsMenu.Page page)
             {
-                if (AudicaMod.menuSpawned && page != OptionsMenu.Page.Misc) AudicaMod.menuSpawned = false;
-                else if (!AudicaMod.menuSpawned && page == OptionsMenu.Page.Misc) AudicaMod.AddSettingsButtons(__instance);
+                if (GrindMode.menuSpawned && page != OptionsMenu.Page.Misc) GrindMode.menuSpawned = false;
+                else if (!GrindMode.menuSpawned && page == OptionsMenu.Page.Misc) GrindMode.AddSettingsButtons(__instance);
             }
 
         }
@@ -130,9 +132,9 @@ namespace AudicaModding
         {
             private static void Postfix(ScoreKeeper __instance, ref SongCues.Cue cue)
             {
-                if (AudicaMod.waitForRestart) return;
-                if(AudicaMod.grindMode && AudicaMod.highscoreMode && !AudicaMod.highscoreIsSetup)
-                    AudicaMod.SetHighscore(ScoreKeeper.I.GetHighScore());
+                if (GrindMode.waitForRestart) return;
+                if(GrindMode.grindMode && GrindMode.highscoreMode && !GrindMode.highscoreIsSetup)
+                    GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());
 
                 if (cue is null)
                 {
@@ -141,18 +143,18 @@ namespace AudicaModding
 
                
                    
-                if (!AudicaMod.grindMode || KataConfig.I.NoFail()) return;
+                if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
 
-                if (AudicaMod.highscoreMode)
+                if (GrindMode.highscoreMode)
                 {
-                    if (!AudicaMod.skipSetScoreMiss)
-                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue, true);
+                    if (!GrindMode.skipSetScoreMiss)
+                        GrindMode.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue, true);
 
-                    AudicaMod.skipSetScoreMiss = !AudicaMod.skipSetScoreMiss;
+                    GrindMode.skipSetScoreMiss = !GrindMode.skipSetScoreMiss;
                     return;
                 }
 
-                if (!AudicaMod.includeChainSustainBreak)
+                if (!GrindMode.includeChainSustainBreak)
                 {
                     if (cue.behavior == Target.TargetBehavior.Chain)
                     {
@@ -166,7 +168,7 @@ namespace AudicaModding
                     }
 
                 }
-                AudicaMod.ReportMiss(cue);
+                GrindMode.ReportMiss(cue);
 
             }
         }
@@ -180,27 +182,27 @@ namespace AudicaModding
 
               
 
-                if (!AudicaMod.grindMode || KataConfig.I.NoFail()) return;
+                if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
 
-                if (AudicaMod.highscoreMode)
+                if (GrindMode.highscoreMode)
                 {
-                    if (!AudicaMod.highscoreIsSetup)
-                        AudicaMod.SetHighscore(ScoreKeeper.I.GetHighScore());
+                    if (!GrindMode.highscoreIsSetup)
+                        GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());
 
-                    if (!AudicaMod.skipSetScoreSuccess)
-                        AudicaMod.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue);
+                    if (!GrindMode.skipSetScoreSuccess)
+                        GrindMode.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue);
 
-                    AudicaMod.skipSetScoreSuccess = !AudicaMod.skipSetScoreSuccess;
+                    GrindMode.skipSetScoreSuccess = !GrindMode.skipSetScoreSuccess;
                     return;
                 }
 
-                if (AudicaMod.chainLH)
+                if (GrindMode.chainLH)
                 {
-                    if (cue.handType == Target.TargetHandType.Left) AudicaMod.chainLH = false;
+                    if (cue.handType == Target.TargetHandType.Left) GrindMode.chainLH = false;
                 }
-                else if (AudicaMod.chainRH)
+                else if (GrindMode.chainRH)
                 {
-                    if (cue.handType == Target.TargetHandType.Right) AudicaMod.chainRH = false;
+                    if (cue.handType == Target.TargetHandType.Right) GrindMode.chainRH = false;
                 }
             }
         }
@@ -211,7 +213,7 @@ namespace AudicaModding
         {
             private static bool Prefix(ScoreKeeper __instance, ref ScoreKeeper.ScoreValidity __result)
             {
-                if (AudicaMod.introSkipped)
+                if (GrindMode.introSkipped)
                 {
 
                     //if (__result == ScoreKeeper.ScoreValidity.Valid || __result == ScoreKeeper.ScoreValidity.NoFail) return false;
@@ -228,7 +230,7 @@ namespace AudicaModding
         {
             private static bool Prefix()
             {
-                if (AudicaMod.introSkipped && !KataConfig.I.practiceMode)
+                if (GrindMode.introSkipped && !KataConfig.I.practiceMode)
                 {
                     return false;
                 }

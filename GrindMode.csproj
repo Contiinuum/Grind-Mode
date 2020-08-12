@@ -71,6 +71,9 @@
       <HintPath>lib\MelonLoader.ModHandler.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="ModPanel">
+      <HintPath>..\..\..\..\..\Games\Steam\steamapps\common\Audica\Plugins\ModPanel.dll</HintPath>
+    </Reference>
     <Reference Include="Oculus.VR">
       <HintPath>lib\Oculus.VR.dll</HintPath>
       <Private>False</Private>

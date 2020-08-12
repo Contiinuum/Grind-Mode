@@ -9,7 +9,7 @@ using System.Collections;
 
 namespace AudicaModding
 {
-    public class AudicaMod : MelonMod
+    public class GrindMode : MelonMod
     {
 
         #region Intro Skipping
@@ -42,8 +42,6 @@ namespace AudicaModding
         static private SongCues.Cue lastTarget = new SongCues.Cue(0, 0, 0, 0, Target.TargetHandType.None, Target.TargetBehavior.Standard, Vector2.zero);
         static private int sustainTickLH = 0;
         static private int sustainTickRH = 0;
-        static private bool chainLHHasUpcomingNode = false;
-        static private bool chainRHHasUpcomingNode = false;
 
         static public bool chainLH = false;
         static public bool chainRH = false;
@@ -93,9 +91,8 @@ namespace AudicaModding
         static private Vector3 skipintroButtonRot = new Vector3(35f, 0, 0);
         static private Vector3 skipIntroButtonScale = new Vector3(.16f, .16f, .16f);
 
-        static public bool introSkipButtonCreated = false;      
+        static public bool introSkipButtonCreated = false;
         #endregion
-
 
         public static class BuildInfo
         {
@@ -128,7 +125,7 @@ namespace AudicaModding
 
         }
 
-        private static void SaveConfig()
+        public static void SaveConfig()
         {
             ModPrefs.SetBool("IntroSkip", "enabled", introSkip);
             ModPrefs.SetBool("AutoSkip", "enabled", autoSkip);
@@ -143,6 +140,7 @@ namespace AudicaModding
         {
             HarmonyInstance instance = HarmonyInstance.Create("AudicaMod");
             Hooks.ApplyHooks(instance);
+            CreateModMenu();
         }
 
         public override void OnLevelWasLoaded(int level)
@@ -155,6 +153,7 @@ namespace AudicaModding
             else
             {
                 LoadConfig();
+                
             }         
         }
 
@@ -210,22 +209,30 @@ namespace AudicaModding
 
         public static IEnumerator SetLaunchPanelButtonsActive(bool active, bool immediate = false)
         {
+
             if (immediate) yield return null;
             else if (active) yield return new WaitForSeconds(.65f);
             else yield return new WaitForSeconds(.3f);
 
-            autoSkipButton.gameObject.SetActive(active);
-            grindModeButton.gameObject.SetActive(active);
-            behaviorButton.gameObject.SetActive(active);
-            if(grindMode && !highscoreMode) allowedMissCountButton.gameObject.SetActive(active);
-            else allowedMissCountButton.gameObject.SetActive(false);  
-                               
+            if (autoSkipButtonCreated) autoSkipButton.gameObject.SetActive(active);
+            if (grindButtonCreated) grindModeButton.gameObject.SetActive(active);
+            if (behaviorButtonCreated) behaviorButton.gameObject.SetActive(active);
+            if (grindMode && !highscoreMode && allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(active);
+            else if (allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(false);                             
         }
 
         public static void SetIntroSkipButtonActive(bool active)
         {
-            if (autoSkip) skipIntroButton.SetActive(false);
-            else skipIntroButton.SetActive(active);
+            try
+            {
+                if (autoSkip) skipIntroButton.SetActive(false);
+                else skipIntroButton.SetActive(active);
+            }
+            catch
+            {
+                CreateIntroSkipButton(true);
+                SetIntroSkipButtonActive(active);
+            }
         }
 
         public static int GetFirstTick()
@@ -272,12 +279,20 @@ namespace AudicaModding
             else SkipIntro();
         }
 
-        public static void CreateIntroSkipButton()
+        public static void CreateIntroSkipButton(bool reinstantiate = false)
         {
             menuButton = GameObject.FindObjectOfType<MainMenuPanel>().buttons[1];
             skipIntroButton = CreateButton(menuButton, "Skip Intro", OnSkipButtonShot, skipIntroButtonPos, skipintroButtonRot, skipIntroButtonScale);
             introSkipButtonCreated = true;
-            SetIntroSkipButtonActive(false);
+            SetIntroSkipButtonActive(reinstantiate);
+        }
+
+
+      
+        //Add your code to this
+        private static void OnDeleteButtonShot()
+        {
+            MelonModLogger.Log("Song deleted.");
         }
 
         //wait a bit, else LaunchPanel is null
@@ -286,8 +301,9 @@ namespace AudicaModding
             yield return new WaitForSeconds(.6f);
             LaunchPanel lp = GameObject.FindObjectOfType<LaunchPanel>();
             launchButton = lp.songPreviewButton;
-            CreateLaunchPanelButtons();
+            CreateLaunchPanelButtons();           
         }
+       
 
         public static void CreateLaunchPanelButtons()
         {
@@ -419,9 +435,12 @@ namespace AudicaModding
 
             //turn off destroy event so we don't lose the reference, disable particles so they don't hit the player's face
             GunButton button = buttonObject.GetComponentInChildren<GunButton>();
+            //don't comment this out, else you'll lose your reference to the button
             button.destroyOnShot = false;
+            //comment out from here...
             button.doMeshExplosion = false;
             button.doParticles = false;
+            //..to here if you want the explosion effect to play
             button.onHitEvent = new UnityEvent();
             button.onHitEvent.AddListener(onHit);
             
@@ -430,7 +449,7 @@ namespace AudicaModding
 
         public static void AddSettingsButtons(OptionsMenu optionMenu)
         {
-
+            
             #region Intro Skip
             optionMenu.AddHeader(0, "Intro Skip");
             string toggleTextIntro = introSkip ? "ON" : "OFF";
@@ -547,6 +566,22 @@ namespace AudicaModding
             menuSpawned = true;
         }
 
+        public static void CreateModMenu()
+        {
+            ModMenu.ModPage page = new ModMenu.ModPage("Grind Mode", "Helps you grind scores by automatically restarting a song according to your settings.");
+            page.AddHeader("Intro Skip");
+            ModMenu.ModButton isb = new ModMenu.ModButton(introSkip ? "ON" : "OFF", introSkip ? "ON" : "OFF", "Allows you to skip song intros", OnIntroButtonShotEventHandler);
+            page.AddButton(isb);
+            ModMenu.RegisterModPage(page);
+        }
+
+        public static void OnIntroButtonShotEventHandler()
+        {
+            GrindMode.introSkip = !GrindMode.introSkip;
+            GrindMode.toggleButtonIntro.label.text = GrindMode.introSkip ? "ON" : "OFF";
+            GrindMode.SaveConfig();
+        }
+
         public static void SetHighscore(int _highscore)
         {
             highscoreIsSetup = true;
@@ -568,7 +603,6 @@ namespace AudicaModding
                 lastTarget = cue;
                 if(cue.nextCue.behavior == Target.TargetBehavior.Chain)
                 {
-
                     return;
                 }
                 else
@@ -585,12 +619,10 @@ namespace AudicaModding
                 if (cue.handType == Target.TargetHandType.Left)
                 {
                     chainLH = true;
-                    chainLHHasUpcomingNode = true;
                 }
                 else
                 {
                     chainRH = true;
-                    chainRHHasUpcomingNode = true;
                 }
                     
             }
@@ -739,6 +771,7 @@ namespace AudicaModding
 
         public override void OnUpdate()
         {
+
             if (MenuState.sState == 0) return;
             //decide if we are currently playing a song
             if (introSkip || autoSkip)
