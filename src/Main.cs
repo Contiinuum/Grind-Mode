@@ -139,8 +139,7 @@ namespace AudicaModding
         public override void OnApplicationStart()
         {
             HarmonyInstance instance = HarmonyInstance.Create("AudicaMod");
-            Hooks.ApplyHooks(instance);
-            CreateModMenu();
+            //CreateModMenu();
         }
 
         public override void OnLevelWasLoaded(int level)
@@ -160,7 +159,7 @@ namespace AudicaModding
         public static void ReportMiss(SongCues.Cue cue)
         {
             //return here becuase for some reason every cue gets reported twice
-            if (lastTarget.tick == cue.tick && lastTarget.handType == cue.handType) return;
+            //if (lastTarget.tick == cue.tick && lastTarget.handType == cue.handType) return;
             //return here, else every single chain node would count as an individual miss
             if (lastTarget.behavior == Target.TargetBehavior.Chain && cue.behavior == Target.TargetBehavior.Chain && lastTarget.handType == cue.handType) return;
            
@@ -285,14 +284,6 @@ namespace AudicaModding
             skipIntroButton = CreateButton(menuButton, "Skip Intro", OnSkipButtonShot, skipIntroButtonPos, skipintroButtonRot, skipIntroButtonScale);
             introSkipButtonCreated = true;
             SetIntroSkipButtonActive(reinstantiate);
-        }
-
-
-      
-        //Add your code to this
-        private static void OnDeleteButtonShot()
-        {
-            MelonModLogger.Log("Song deleted.");
         }
 
         //wait a bit, else LaunchPanel is null
@@ -566,15 +557,17 @@ namespace AudicaModding
             menuSpawned = true;
         }
 
+        /*
         public static void CreateModMenu()
         {
+            MelonModLogger.Log("Hello");
             ModMenu.ModPage page = new ModMenu.ModPage("Grind Mode", "Helps you grind scores by automatically restarting a song according to your settings.");
             page.AddHeader("Intro Skip");
             ModMenu.ModButton isb = new ModMenu.ModButton(introSkip ? "ON" : "OFF", introSkip ? "ON" : "OFF", "Allows you to skip song intros", OnIntroButtonShotEventHandler);
             page.AddButton(isb);
             ModMenu.RegisterModPage(page);
         }
-
+        */
         public static void OnIntroButtonShotEventHandler()
         {
             GrindMode.introSkip = !GrindMode.introSkip;
@@ -772,7 +765,7 @@ namespace AudicaModding
         public override void OnUpdate()
         {
 
-            if (MenuState.sState == 0) return;
+            if (MenuState.sState != MenuState.State.Launched) return;
             //decide if we are currently playing a song
             if (introSkip || autoSkip)
             {

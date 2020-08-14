@@ -12,10 +12,10 @@ namespace AudicaModding
 {
     internal static class Hooks
     {
-        public static void ApplyHooks(HarmonyInstance instance)
+        /*public static void ApplyHooks(HarmonyInstance instance)
         {
             instance.PatchAll(Assembly.GetExecutingAssembly());
-        }
+        }*/
 
         //Hook to initiate intro skipping
         [HarmonyPatch(typeof(AudioDriver), "StartPlaying")]
@@ -147,10 +147,10 @@ namespace AudicaModding
 
                 if (GrindMode.highscoreMode)
                 {
-                    if (!GrindMode.skipSetScoreMiss)
+                    //if (!GrindMode.skipSetScoreMiss)
                         GrindMode.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue, true);
 
-                    GrindMode.skipSetScoreMiss = !GrindMode.skipSetScoreMiss;
+                    //GrindMode.skipSetScoreMiss = !GrindMode.skipSetScoreMiss;
                     return;
                 }
 
@@ -189,10 +189,10 @@ namespace AudicaModding
                     if (!GrindMode.highscoreIsSetup)
                         GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());
 
-                    if (!GrindMode.skipSetScoreSuccess)
+                   // if (!GrindMode.skipSetScoreSuccess)
                         GrindMode.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue);
 
-                    GrindMode.skipSetScoreSuccess = !GrindMode.skipSetScoreSuccess;
+                    //GrindMode.skipSetScoreSuccess = !GrindMode.skipSetScoreSuccess;
                     return;
                 }
 
@@ -219,9 +219,9 @@ namespace AudicaModding
                     //if (__result == ScoreKeeper.ScoreValidity.Valid || __result == ScoreKeeper.ScoreValidity.NoFail) return false;
                     __result = ScoreKeeper.ScoreValidity.Valid;
                     __instance.mHasInvalidatedScore = false;
-                    return false;
+                    return true;
                 }
-                return true;
+                return false;
             }
         }
 
@@ -232,9 +232,9 @@ namespace AudicaModding
             {
                 if (GrindMode.introSkipped && !KataConfig.I.practiceMode)
                 {
-                    return false;
+                    return true;
                 }
-                else return true;
+                else return false;
                 
             }
         }
