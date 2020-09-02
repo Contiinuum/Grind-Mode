@@ -46,11 +46,18 @@ namespace AudicaModding
         [HarmonyPatch(typeof(MenuState), "SetState", new Type[] { typeof(MenuState.State) })]
         private static class PatchSetMenuState
         {
+            private static void Prefix(MenuState __instance, ref MenuState.State state)
+            {
+                if (GrindMode.recordRestarted)
+                {
+                    if (state == MenuState.State.SongPage) GrindMode.RecordRestart();                       
+                }
+            }
+
             private static void Postfix(MenuState __instance, ref MenuState.State state)
             {
-
-                if (GrindMode.quickButtons)
-                {
+                //if (GrindMode.quickButtons)
+                //{
                     if (state == MenuState.State.LaunchPage && !GrindMode.grindButtonCreated && !GrindMode.autoSkipButtonCreated && !GrindMode.allowedMissCountButtonCreated)
                     {
                         MelonCoroutines.Start(GrindMode.AddLaunchPanelButtons());
@@ -63,11 +70,11 @@ namespace AudicaModding
                        // else if (state == MenuState.State.Launching) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false, true));
 
                     }
-                }
-                else if (GrindMode.grindButtonCreated || GrindMode.autoSkipButtonCreated) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false, true));
+                //}
+                //else if (GrindMode.grindButtonCreated || GrindMode.autoSkipButtonCreated) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false, true));
 
 
-                if (GrindMode.introSkip && state == MenuState.State.SongPage && GrindMode.menuButton is null) GrindMode.CreateIntroSkipButton();
+                if (state == MenuState.State.SongPage && GrindMode.menuButton is null) GrindMode.CreateIntroSkipButton();
 
                 if (GrindMode.introSkipButtonCreated)
                 {
@@ -91,7 +98,7 @@ namespace AudicaModding
         {
             private static void Postfix(PauseScreen __instance)
             {
-                if (GrindMode.introSkip)
+                //if (GrindMode.introSkip)
                     GrindMode.SetPaused(true);
             }
         }
@@ -101,7 +108,7 @@ namespace AudicaModding
         {
             private static void Prefix(PauseScreen __instance)
             {
-                if (GrindMode.introSkip)
+                //if (GrindMode.introSkip)
                     GrindMode.SetPaused(false);
             }
         }
@@ -112,6 +119,17 @@ namespace AudicaModding
             private static void Prefix(InGameUI __instance)
             {
                 GrindMode.ResetVariables();
+                GrindMode.DontRecordRestart();
+            }
+        }
+
+        [HarmonyPatch(typeof(FailedScreen), "OnEnable")]
+        private static class PatchGoToFailedPage
+        {
+            private static bool Prefix(InGameUI __instance)
+            {
+                GrindMode.RestartSong(true);
+                return true;
             }
         }
 
@@ -139,9 +157,7 @@ namespace AudicaModding
                 if (cue is null)
                 {
                     return;
-                }
-
-               
+                }             
                    
                 if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
 
