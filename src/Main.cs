@@ -164,8 +164,7 @@ namespace AudicaModding
 
         public static void ReportMiss(SongCues.Cue cue)
         {
-            //return here becuase for some reason every cue gets reported twice
-            //if (lastTarget.tick == cue.tick && lastTarget.handType == cue.handType) return;
+            if (highscoreMode) return;
             //return here, else every single chain node would count as an individual miss
             if (lastTarget.behavior == Target.TargetBehavior.Chain && cue.behavior == Target.TargetBehavior.Chain && lastTarget.handType == cue.handType) return;
            
@@ -393,7 +392,6 @@ namespace AudicaModding
                     if (allowedMissCount > 10) allowedMissCount = 0;
                     string txt = "Allowed Misses: " + allowedMissCount.ToString();
                     allowedMissCountButton.label.text = txt;
-                    //if(toggleButtonAllowedMissCount is OptionsMenuButton) toggleButtonAllowedMissCount.label.text = txt;
                     SaveConfig();
                     
                 });
@@ -420,7 +418,7 @@ namespace AudicaModding
                     string txt = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
                     allowedMissCountButton.gameObject.SetActive(!highscoreMode && grindMode);
                     behaviorButton.label.text = txt;
-                    //if (toggleButtonBehavior is OptionsMenuButton) toggleButtonBehavior.label.text = txt;
+                    SaveConfig();
                 });
                 behaviorButton.transform.position = new Vector3(0, 15.2f, 24.19168f);
                 behaviorButtonCreated = true;
