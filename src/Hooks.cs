@@ -26,7 +26,7 @@ namespace AudicaModding
                 if (KataConfig.I.practiceMode) return;
 
                 if (GrindMode.waitForRestart) GrindMode.waitForRestart = false;
-                if (GrindMode.skipQueued || GrindMode.autoSkip)
+                if (GrindMode.skipQueued || Config.autoSkip)
                 {
                     GrindMode.SkipIntro();
                 }
@@ -41,7 +41,7 @@ namespace AudicaModding
             {
                 if (KataConfig.I.practiceMode) return;
 
-                if(GrindMode.grindMode && GrindMode.highscoreMode)
+                if(GrindMode.grindMode && Config.highscoreMode)
                     GrindMode.SetCues(__instance.mCues.cues);
             }
         }
@@ -80,7 +80,7 @@ namespace AudicaModding
                 if (GrindMode.introSkipButtonCreated)
                 {
                     if (state != MenuState.State.Launched || state != MenuState.State.Launching) GrindMode.SetIntroSkipButtonActive(false);
-                    else if (state == MenuState.State.Launched && (GrindMode.autoSkip || KataConfig.I.practiceMode)) GrindMode.SetIntroSkipButtonActive(false);
+                    else if (state == MenuState.State.Launched && (Config.autoSkip || KataConfig.I.practiceMode)) GrindMode.SetIntroSkipButtonActive(false);
                 }
 
                 if (state == MenuState.State.Launched && !KataConfig.I.practiceMode)
@@ -140,7 +140,7 @@ namespace AudicaModding
             }
         }
 
-        [HarmonyPatch(typeof(OptionsMenu), "ShowPage", new Type[] { typeof(OptionsMenu.Page) })]
+       /* [HarmonyPatch(typeof(OptionsMenu), "ShowPage", new Type[] { typeof(OptionsMenu.Page) })]
         private static class PatchOptionsMenuUpdate
         {
             private static void Postfix(OptionsMenu __instance, ref OptionsMenu.Page page)
@@ -150,6 +150,7 @@ namespace AudicaModding
             }
 
         }
+        */
 
         //Hook for reporting misses
         [HarmonyPatch(typeof(ScoreKeeper), "OnFailure", new Type[] { typeof(SongCues.Cue), typeof(bool), typeof(bool) })]
@@ -160,7 +161,7 @@ namespace AudicaModding
                 if (KataConfig.I.practiceMode) return;
 
                 if (GrindMode.waitForRestart) return;
-                if(GrindMode.grindMode && GrindMode.highscoreMode && !GrindMode.highscoreIsSetup)
+                if(GrindMode.grindMode && Config.highscoreMode && !GrindMode.highscoreIsSetup)
                     GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());
 
                 if (cue is null)
@@ -170,7 +171,7 @@ namespace AudicaModding
                    
                 if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
 
-                if (GrindMode.highscoreMode)
+                if (Config.highscoreMode)
                 {
                     //if (!GrindMode.skipSetScoreMiss)
                         GrindMode.SetCurrentScore(__instance.mScore, __instance.mStreak, __instance.mMultiplier, cue, true);
@@ -179,7 +180,7 @@ namespace AudicaModding
                     return;
                 }
 
-                if (!GrindMode.includeChainSustainBreak)
+                if (!Config.includeChainSustainBreak)
                 {
                     if (cue.behavior == Target.TargetBehavior.Chain)
                     {
@@ -209,7 +210,7 @@ namespace AudicaModding
 
                 if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
 
-                if (GrindMode.highscoreMode)
+                if (Config.highscoreMode)
                 {
                     if (!GrindMode.highscoreIsSetup)
                         GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());

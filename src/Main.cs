@@ -18,28 +18,27 @@ namespace AudicaModding
         static public bool isPlaying = false;
         static public bool skipQueued = false;
         static public bool canSkip = false;
-        static public bool autoSkip = false;
         static private bool isPaused = false;
 
         static public int cachedFirstTick = 0;
         #endregion
         #region Grind Mode
         static public bool grindMode = false;
-        static public bool includeChainSustainBreak = false;
+        //static public bool includeChainSustainBreak = false;
         static public bool reportLastChainNode = false;
         //static public bool quickButtons = false;
-        static public bool highscoreMode = false;
+        //static public bool highscoreMode = false;
         static public bool highscoreIsSetup = false;
         static public bool waitForRestart = false;
         static public bool skipSetScoreMiss = false;
         static public bool skipSetScoreSuccess = false;
         static public bool cuesSet = false;
 
-        static private bool showStats = false;
+        //static private bool showStats = false;
         static public bool recordRestarted = false;
 
         static public int missCount = 0;     
-        static public int allowedMissCount = 10;
+        //static public int allowedMissCount = 10;
  
         static private List<SongCues.Cue> reportedCues = new List<SongCues.Cue>();
         static private SongCues.Cue lastTarget = new SongCues.Cue(0, 0, 0, 0, Target.TargetHandType.None, Target.TargetBehavior.Standard, Vector2.zero);
@@ -63,7 +62,7 @@ namespace AudicaModding
         //public static OptionsMenuButton toggleButtonGrind = null;
         //public static OptionsMenuButton toggleButtonIntro = null;
         //public static OptionsMenuButton toggleButtonAutoSkip = null;
-        public static OptionsMenuButton toggleButtonIncludeBreaks = null;
+        //public static OptionsMenuButton toggleButtonIncludeBreaks = null;
         //public static OptionsMenuButton toggleButtonAllowedMissCount = null;
         //public static OptionsMenuButton toggleButtonQuickButtons = null;
         //public static OptionsMenuButton toggleButtonBehavior = null;
@@ -104,67 +103,24 @@ namespace AudicaModding
             public const string Name = "GrindMode";  // Name of the Mod.  (MUST BE SET)
             public const string Author = "Continuum"; // Author of the Mod.  (Set as null if none)
             public const string Company = null; // Company that made the Mod.  (Set as null if none)
-            public const string Version = "0.1.0"; // Version of the Mod.  (MUST BE SET)
+            public const string Version = "2.1.6"; // Version of the Mod.  (MUST BE SET)
             public const string DownloadLink = null; // Download Link for the Mod.  (Set as null if none)
         }
-
-        private void CreateConfig()
-        {
-            if(!ModPrefs.HasKey("IntroSkip", "enabled")) ModPrefs.RegisterPrefBool("IntroSkip", "enabled", false);
-            if (!ModPrefs.HasKey("AutoSkip", "enabled")) ModPrefs.RegisterPrefBool("AutoSkip", "enabled", false);
-            if (!ModPrefs.HasKey("GrindMode", "breaks")) ModPrefs.RegisterPrefBool("GrindMode", "breaks", false);
-            if (!ModPrefs.HasKey("GrindMode", "missCount")) ModPrefs.RegisterPrefInt("GrindMode", "missCount", 0);
-            //ModPrefs.RegisterPrefBool("GrindMode", "quickButtons", false);
-            if (!ModPrefs.HasKey("GrindMode", "highscoreMode")) ModPrefs.RegisterPrefBool("GrindMode", "highscoreMode", false);
-            if (!ModPrefs.HasKey("GrindMode", "showStats")) ModPrefs.RegisterPrefBool("GrindMode", "showStats", false);
-            
-        }
-
-        private void LoadConfig()
-        {
-            //introSkip = ModPrefs.GetBool("IntroSkip", "enabled");
-            autoSkip = ModPrefs.GetBool("AutoSkip", "enabled");
-            includeChainSustainBreak = ModPrefs.GetBool("GrindMode", "breaks");
-            allowedMissCount = ModPrefs.GetInt("GrindMode", "missCount");
-            //quickButtons = ModPrefs.GetBool("GrindMode", "quickButtons");
-            highscoreMode = ModPrefs.GetBool("GrindMode", "highscoreMode");
-            showStats = ModPrefs.GetBool("GrindMode", "showStats");
-        }
-
-        public static void SaveConfig()
-        {
-            //ModPrefs.SetBool("IntroSkip", "enabled", introSkip);
-            ModPrefs.SetBool("AutoSkip", "enabled", autoSkip);
-            ModPrefs.SetBool("GrindMode", "breaks", includeChainSustainBreak);
-            ModPrefs.SetInt("GrindMode", "missCount", allowedMissCount);
-            //ModPrefs.SetBool("GrindMode", "quickButtons", quickButtons);
-            ModPrefs.SetBool("GrindMode", "highscoreMode", highscoreMode);
-            ModPrefs.SetBool("GrindMode", "showStats", showStats);
-        }
-
+        
         public override void OnApplicationStart()
         {
-            HarmonyInstance instance = HarmonyInstance.Create("AudicaMod");
-            //CreateModMenu();
+            HarmonyInstance instance = HarmonyInstance.Create("GrindMode");
+            Config.RegisterConfig();
         }
 
-        public override void OnLevelWasLoaded(int level)
+        public override void OnModSettingsApplied()
         {
-  
-            if (!ModPrefs.HasKey("IntroSkip", "enabled") || !ModPrefs.HasKey("GrindMode", "breaks") || !ModPrefs.HasKey("GrindMode", "missCount") || !ModPrefs.HasKey("AutoSkip", "enabled") || !ModPrefs.HasKey("GrindMode", "showStats"))
-            {
-                CreateConfig();
-            }
-            else
-            {
-                LoadConfig();
-                
-            }         
+            Config.OnModSettingsApplied();
         }
 
         public static void ReportMiss(SongCues.Cue cue)
         {
-            if (highscoreMode) return;
+            if (Config.highscoreMode) return;
             //return here, else every single chain node would count as an individual miss
             if (lastTarget.behavior == Target.TargetBehavior.Chain && cue.behavior == Target.TargetBehavior.Chain && lastTarget.handType == cue.handType) return;
            
@@ -184,7 +140,7 @@ namespace AudicaModding
 
         private static void CheckFail()
         {
-            if (missCount > allowedMissCount)
+            if (missCount > Config.allowedMissCount)
             {
                 RestartSong();
             }
@@ -194,8 +150,8 @@ namespace AudicaModding
         public static void RestartSong(bool failed = false)
         {
             waitForRestart = true;
-            if (!showStats && !failed) InGameUI.I.Restart();
-            else if(showStats)
+            if (!Config.showStats && !failed) InGameUI.I.Restart();
+            else if(Config.showStats)
             {
                 //SongEnd.I.ShowEndSeqence();
                 TargetSpawner spawner = GameObject.FindObjectOfType<TargetSpawner>();
@@ -227,9 +183,7 @@ namespace AudicaModding
         static private void PlaySound()
         {
             KataUtil.PlayFMODEvent("event:/gameplay/overdrive_complete", audiocomponent.Get());
-        }
-
-      
+        }    
 
         public static IEnumerator SetLaunchPanelButtonsActive(bool active, bool immediate = false)
         {
@@ -242,7 +196,7 @@ namespace AudicaModding
             if (grindButtonCreated) grindModeButton.gameObject.SetActive(active);
             if (instantRestartButtonCreated) instantRestartButton.gameObject.SetActive(active);
             if (behaviorButtonCreated) behaviorButton.gameObject.SetActive(active);
-            if (grindMode && !highscoreMode && allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(active);
+            if (grindMode && !Config.highscoreMode && allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(active);
             else if (allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(false);                             
         }
 
@@ -250,7 +204,7 @@ namespace AudicaModding
         {
             try
             {
-                if (autoSkip) skipIntroButton.SetActive(false);
+                if (Config.autoSkip) skipIntroButton.SetActive(false);
                 else skipIntroButton.SetActive(active);
             }
             catch
@@ -340,9 +294,8 @@ namespace AudicaModding
                 {
                     grindMode = !grindMode;
                     string txt = grindMode ? "ON" : "OFF";
-                    allowedMissCountButton.gameObject.SetActive(grindMode && !highscoreMode);
+                    allowedMissCountButton.gameObject.SetActive(grindMode && !Config.highscoreMode);
                     grindModeButton.label.text = "Grind Mode " + txt;
-                    //if (toggleButtonGrind is OptionsMenuButton) toggleButtonGrind.label.text = txt;
                 });
                 grindModeButton.transform.position = new Vector3(0, 13.2f, 24.19168f);
                 grindButtonCreated = true;
@@ -357,17 +310,16 @@ namespace AudicaModding
 
 
                 TextMeshPro autoSkipButtonText = autoSkipButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                autoSkipButtonText.text = autoSkip ? "AutoSkip ON" : "AutoSkip OFF";
+                autoSkipButtonText.text = Config.autoSkip ? "AutoSkip ON" : "AutoSkip OFF";
 
                 autoSkipButton.SelectedAction = null;
                 autoSkipButton.IsChecked = null;
                 autoSkipButton.SelectedAction = new Action(() =>
                 {
-                    autoSkip = !autoSkip;
-                    string txt = "Auto Skip " + (autoSkip ? "ON" : "OFF");
-                    autoSkipButton.label.text = txt;
-                    //if (toggleButtonAutoSkip is OptionsMenuButton) toggleButtonAutoSkip.label.text = "Auto Skip: " + txt;
-                    SaveConfig();
+                    Config.autoSkip = !Config.autoSkip;
+                    Config.Save();
+                    string txt = "Auto Skip " + (Config.autoSkip ? "ON" : "OFF");
+                    autoSkipButton.label.text = txt;                   
                 });
                 autoSkipButton.transform.position = new Vector3(-7.317519f, 13.2f, 24.19168f);
                 autoSkipButtonCreated = true;
@@ -382,17 +334,18 @@ namespace AudicaModding
 
 
                 TextMeshPro missCountButtonText = allowedMissCountButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                missCountButtonText.text = "Allowed misses: " + allowedMissCount.ToString();
+                missCountButtonText.text = "Allowed misses: " + Config.allowedMissCount.ToString();
 
                 allowedMissCountButton.SelectedAction = null;
                 allowedMissCountButton.IsChecked = null;
                 allowedMissCountButton.SelectedAction = new Action(() =>
                 {
-                    allowedMissCount += 1;
-                    if (allowedMissCount > 10) allowedMissCount = 0;
-                    string txt = "Allowed Misses: " + allowedMissCount.ToString();
+                    Config.allowedMissCount += 1;
+                    Config.Save();
+                    if (Config.allowedMissCount > 10) Config.allowedMissCount = 0;
+                    string txt = "Allowed Misses: " + Config.allowedMissCount.ToString();
                     allowedMissCountButton.label.text = txt;
-                    SaveConfig();
+                   
                     
                 });
                 allowedMissCountButton.transform.position = new Vector3(7.317519f, 13.2f, 24.19168f);
@@ -408,17 +361,19 @@ namespace AudicaModding
                 UnityEngine.Object.Destroy(behaviorButton.transform.root.GetComponentInChildren<Localizer>());
 
                 TextMeshPro behaviorButtonText = behaviorButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                behaviorButtonText.text = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+                behaviorButtonText.text = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
 
                 behaviorButton.SelectedAction = null;
                 behaviorButton.IsChecked = null;
                 behaviorButton.SelectedAction = new Action(() =>
                 {
-                    highscoreMode = !highscoreMode;
-                    string txt = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-                    allowedMissCountButton.gameObject.SetActive(!highscoreMode && grindMode);
+                    Config.highscoreMode = !Config.highscoreMode;
+                    Config.Save();
+                    MelonLogger.Log(Config.highscoreMode.ToString());
+                    string txt = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+                    allowedMissCountButton.gameObject.SetActive(!Config.highscoreMode && grindMode);
                     behaviorButton.label.text = txt;
-                    SaveConfig();
+                   
                 });
                 behaviorButton.transform.position = new Vector3(0, 15.2f, 24.19168f);
                 behaviorButtonCreated = true;
@@ -433,17 +388,16 @@ namespace AudicaModding
 
 
                 TextMeshPro instantSkipButtonText = instantRestartButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                instantSkipButtonText.text = showStats ? "Show Stats ON" : "Show Stats OFF";
+                instantSkipButtonText.text = Config.showStats ? "Show Stats ON" : "Show Stats OFF";
 
                 instantRestartButton.SelectedAction = null;
                 instantRestartButton.IsChecked = null;
                 instantRestartButton.SelectedAction = new Action(() =>
                 {
-                    showStats = !showStats;
-                    string txt = "Show Stats " + (showStats ? "ON" : "OFF");
-                    instantRestartButton.label.text = txt;
-                    //if (toggleButtonAutoSkip is OptionsMenuButton) toggleButtonAutoSkip.label.text = "Auto Skip: " + txt;
-                    SaveConfig();
+                    Config.showStats = !Config.showStats;
+                    Config.Save();
+                    string txt = "Show Stats " + (Config.showStats ? "ON" : "OFF");
+                    instantRestartButton.label.text = txt;                    
                 });
                 instantRestartButton.transform.position = new Vector3(-7.317519f, 15.2f, 24.19168f);
                 instantRestartButtonCreated = true;
@@ -452,15 +406,35 @@ namespace AudicaModding
             SetLaunchPanelButtonsActive(true);
         }
 
+        public static void UpdateQuickButtons()
+        {
+            if (autoSkipButtonCreated)
+            {
+                autoSkipButton.label.text = "Auto Skip " + (Config.autoSkip ? "ON" : "OFF");
+            }
+            if (allowedMissCountButtonCreated)
+            {
+                allowedMissCountButton.label.text = "Allowed Misses: " + Config.allowedMissCount.ToString();
+            }
+            if (behaviorButtonCreated)
+            {
+                behaviorButton.label.text = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
+            }
+            if (instantRestartButtonCreated)
+            {
+                instantRestartButton.label.text = "Show Stats " + (Config.showStats ? "ON" : "OFF");
+            }
+        }
      
         //track paused state so we can disable intro button while paused
         public static void SetPaused(bool _isPaused)
         {
             isPaused = _isPaused;
             if (isPaused) SetIntroSkipButtonActive(false);
-            else if (canSkip && !autoSkip) SetIntroSkipButtonActive(true);
+            else if (canSkip && !Config.autoSkip) SetIntroSkipButtonActive(true);
         }
 
+        
         //creates the button used ingame for intro skipping
         private static GameObject CreateButton(GameObject buttonPrefab, string label, Action onHit, Vector3 position, Vector3 eulerRotation, Vector3 scale)
         {
@@ -486,146 +460,6 @@ namespace AudicaModding
             button.onHitEvent.AddListener(onHit);
             
             return buttonObject.gameObject;
-        }
-
-        public static void AddSettingsButtons(OptionsMenu optionMenu)
-        {
-            /*
-            #region Intro Skip
-            optionMenu.AddHeader(0, "Intro Skip");
-            string toggleTextIntro = introSkip ? "ON" : "OFF";
-            toggleButtonIntro = optionMenu.AddButton
-                (0,
-                toggleTextIntro,
-                new Action(() =>
-                {
-                    introSkip = !introSkip;
-                    toggleButtonIntro.label.text = introSkip ? "ON" : "OFF";
-                    SaveConfig();
-                }),
-                null,
-                "Allows you to skip song intros");
-            #endregion
-            #region Auto Skip
-            string toggleTextAutoSkip = autoSkip ? "Auto Skip ON" : "Auto Skip OFF";
-            toggleButtonAutoSkip = optionMenu.AddButton
-                (1,
-                toggleTextAutoSkip,
-                new Action(() =>
-                {
-                    autoSkip = !autoSkip;
-                    string txt = "AutoSkip " + (autoSkip ? "ON" : "OFF");
-                    SaveConfig();
-                    
-                    toggleButtonAutoSkip.label.text = txt;
-                    if (autoSkipButtonCreated) autoSkipButton.label.text = txt;
-                }),
-                null,
-                "Automatically skips song intros");
-            #endregion
-            #region Grind Mode
-            optionMenu.AddHeader(0, "Grind Mode");
-            string toggleTextGrind = grindMode ? "ON" : "OFF";
-            toggleButtonGrind = optionMenu.AddButton
-                (0,
-                toggleTextGrind,
-                new Action(() =>
-                {
-                    grindMode = !grindMode;
-                    string txt = grindMode ? "ON" : "OFF";
-                    SaveConfig();
-                    
-                    toggleButtonGrind.label.text = txt;
-                    if (grindButtonCreated) grindModeButton.label.text = "Grind Mode " + txt;
-                }),
-                null,
-                "Automatially restarts a song after a set amount of misses (Allowed Misses)");
-            #endregion
-            */
-            #region Breaks
-            optionMenu.AddHeader(0, "Grind Mode");
-            string toggleTextBreaks = includeChainSustainBreak ? "Include Breaks ON" : "Include Breaks OFF";
-            toggleButtonIncludeBreaks = optionMenu.AddButton
-                (0,
-                toggleTextBreaks,
-                new Action(() =>
-                {
-                    includeChainSustainBreak = !includeChainSustainBreak;
-                    toggleButtonIncludeBreaks.label.text = includeChainSustainBreak ? "Include Breaks ON" : "Include Breaks OFF";
-                    SaveConfig();                   
-                }),
-                null,
-                "Counts chain and sustain breaks as misses");
-            #endregion
-            /*
-            #region Allowed Misses
-            string toggleTextMiss = "Allowed misses: " + allowedMissCount.ToString();
-            toggleButtonAllowedMissCount = optionMenu.AddButton
-                (0,
-                toggleTextMiss,
-                new Action(() =>
-                {                  
-                    allowedMissCount += 1;
-                    if (allowedMissCount > 10) allowedMissCount = 0;
-                    string txt = "Allowed Misses: " + allowedMissCount.ToString();
-                    toggleButtonAllowedMissCount.label.text = txt;
-                    if(allowedMissCountButtonCreated) allowedMissCountButton.label.text = txt;
-                    SaveConfig();
-                }),
-                null,
-                "Sets the allowed amount of misses before restarting");
-            #endregion
-            #region Behavior
-            string toggleTextBehavior = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-            toggleButtonBehavior = optionMenu.AddButton
-                (1,
-                toggleTextBehavior,
-                new Action(() =>
-                {
-                    highscoreMode = !highscoreMode;
-                    string txt = highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-                    SaveConfig();
-
-                    toggleButtonBehavior.label.text = txt;
-                    if (behaviorButtonCreated) behaviorButton.label.text = txt;
-                }),
-                null,
-                "Highscore fails the song after not being able to beat your current highscore. Standard will fail after a set amount of misses");
-            #endregion
-            #region Quick Buttons
-            string toggleTextQuickButtons = quickButtons ? "Quick Buttons ON" : "Quick Buttons OFF";
-            toggleButtonQuickButtons = optionMenu.AddButton
-                (0,
-                toggleTextQuickButtons,
-                new Action(() =>
-                {
-                    quickButtons = !quickButtons;
-                    toggleButtonQuickButtons.label.text = quickButtons ? "Quick Buttons ON" : "Quick Buttons OFF";
-                    SaveConfig();                   
-                }),
-                null,
-                "Enables Quick Buttons for Auto Skip, Grind Mode, Allowed Misses and ModeSwitch before starting a song");
-            #endregion
-            */
-            menuSpawned = true;
-        }
-
-        /*
-        public static void CreateModMenu()
-        {
-            MelonModLogger.Log("Hello");
-            ModMenu.ModPage page = new ModMenu.ModPage("Grind Mode", "Helps you grind scores by automatically restarting a song according to your settings.");
-            page.AddHeader("Intro Skip");
-            ModMenu.ModButton isb = new ModMenu.ModButton(introSkip ? "ON" : "OFF", introSkip ? "ON" : "OFF", "Allows you to skip song intros", OnIntroButtonShotEventHandler);
-            page.AddButton(isb);
-            ModMenu.RegisterModPage(page);
-        }
-        */
-        public static void OnIntroButtonShotEventHandler()
-        {
-            //GrindMode.introSkip = !GrindMode.introSkip;
-            //GrindMode.toggleButtonIntro.label.text = GrindMode.introSkip ? "ON" : "OFF";
-            //GrindMode.SaveConfig();
         }
 
         public static void SetHighscore(int _highscore)
@@ -805,8 +639,8 @@ namespace AudicaModding
             if (debug)
             {
                 int sc = currentScore + theoreticalMaxScore;
-                MelonModLogger.Log("Max calculated score: " + sc.ToString());
-                MelonModLogger.Log("Real max score: " + StarThresholds.I.GetMaxRawScore(SongDataHolder.I.songData.songID, KataConfig.Difficulty.Expert).ToString());
+                MelonLogger.Log("Max calculated score: " + sc.ToString());
+                MelonLogger.Log("Real max score: " + StarThresholds.I.GetMaxRawScore(SongDataHolder.I.songData.songID, KataConfig.Difficulty.Expert).ToString());
             }
 
             if (currentScore + theoreticalMaxScore < highscore)
@@ -817,8 +651,6 @@ namespace AudicaModding
 
         public override void OnUpdate()
         {
-
-            //if (MenuState.sState != MenuState.State.Launched) return;
             //decide if we are currently playing a song
             if (!isPlaying && MenuState.sState == MenuState.State.Launched && AudioDriver.I is AudioDriver)
             {
@@ -843,7 +675,7 @@ namespace AudicaModding
             if (!skipQueued && !introSkipped && GetCurrentTick() < GetFirstTick() - 5760)
             {
                 if(!canSkip) canSkip = true;
-                if (!autoSkip && !isPaused && !skipIntroButton.activeSelf) SetIntroSkipButtonActive(true);
+                if (!Config.autoSkip && !isPaused && !skipIntroButton.activeSelf) SetIntroSkipButtonActive(true);
             }
             else
             {
