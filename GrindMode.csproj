@@ -67,12 +67,9 @@
       <HintPath>lib\Il2CppSystem.Xml.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MelonLoader.ModHandler">
-      <HintPath>lib\MelonLoader.ModHandler.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="ModPanel">
-      <HintPath>..\..\..\..\..\Games\Steam\steamapps\common\Audica\Plugins\ModPanel.dll</HintPath>
+    <Reference Include="MelonLoader, Version=0.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>D:\Games\Steam\steamapps\common\Audica\MelonLoader\MelonLoader.dll</HintPath>
     </Reference>
     <Reference Include="Oculus.VR">
       <HintPath>lib\Oculus.VR.dll</HintPath>
@@ -185,9 +182,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\Config.cs" />
+    <Compile Include="src\GrindModePanel.cs" />
     <Compile Include="src\Hooks.cs" />
     <Compile Include="src\Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\GrindModeButton.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -23,7 +23,7 @@ namespace AudicaModding
         static public int cachedFirstTick = 0;
         #endregion
         #region Grind Mode
-        static public bool grindMode = false;
+        static public bool Enabled = false;
         //static public bool includeChainSustainBreak = false;
         static public bool reportLastChainNode = false;
         //static public bool quickButtons = false;
@@ -81,11 +81,12 @@ namespace AudicaModding
 
         static private Vector3 launchPanelButtonScale = new Vector3(1f, 1f, 1f);
 
-        static public bool grindButtonCreated = false;
-        static public bool autoSkipButtonCreated = false;
-        static public bool allowedMissCountButtonCreated = false;
-        static public bool behaviorButtonCreated = false;
-        static public bool instantRestartButtonCreated = false;
+        static public bool grindButtonCreated => grindModeButton != null;
+        static public bool autoSkipButtonCreated => autoSkipButton != null;
+        static public bool allowedMissCountButtonCreated => allowedMissCountButton != null;
+        static public bool behaviorButtonCreated => behaviorButton != null;
+        static public bool instantRestartButtonCreated => instantRestartButton != null;
+        static public bool ShowPanel = false;
         #endregion
         #region InGame Button
         static public GameObject menuButton = null;
@@ -95,7 +96,7 @@ namespace AudicaModding
         static private Vector3 skipintroButtonRot = new Vector3(35f, 0, 0);
         static private Vector3 skipIntroButtonScale = new Vector3(.16f, .16f, .16f);
 
-        static public bool introSkipButtonCreated = false;
+        static public bool introSkipButtonCreated => skipIntroButton != null;
         #endregion
 
         public static class BuildInfo
@@ -103,19 +104,18 @@ namespace AudicaModding
             public const string Name = "GrindMode";  // Name of the Mod.  (MUST BE SET)
             public const string Author = "Continuum"; // Author of the Mod.  (Set as null if none)
             public const string Company = null; // Company that made the Mod.  (Set as null if none)
-            public const string Version = "2.1.6"; // Version of the Mod.  (MUST BE SET)
+            public const string Version = "3.0.0"; // Version of the Mod.  (MUST BE SET)
             public const string DownloadLink = null; // Download Link for the Mod.  (Set as null if none)
         }
         
         public override void OnApplicationStart()
         {
-            HarmonyInstance instance = HarmonyInstance.Create("GrindMode");
             Config.RegisterConfig();
         }
 
-        public override void OnModSettingsApplied()
+        public override void OnPreferencesSaved()
         {
-            Config.OnModSettingsApplied();
+            Config.OnPreferencesSaved();
         }
 
         public static void ReportMiss(SongCues.Cue cue)
@@ -150,7 +150,11 @@ namespace AudicaModding
         public static void RestartSong(bool failed = false)
         {
             waitForRestart = true;
-            if (!Config.showStats && !failed) InGameUI.I.Restart();
+            if (!Config.showStats && !failed) 
+            {
+                PlaySound();
+                InGameUI.I.Restart();
+            }
             else if(Config.showStats)
             {
                 //SongEnd.I.ShowEndSeqence();
@@ -165,7 +169,8 @@ namespace AudicaModding
                 recordRestarted = true;
                 AudioDriver.I.Pause();
             }
-            PlaySound();
+            
+            
             ResetVariables();
         }
 
@@ -177,41 +182,22 @@ namespace AudicaModding
 
         static public void GetAudioComponent()
         {
-            audiocomponent = GameObject.Find("HmxAudioEmitter (1)").GetComponent<HmxAudioEmitter>();
+            if (audiocomponent is null) 
+            {
+                audiocomponent = GameObject.Find("HmxAudioEmitter (1)").GetComponent<HmxAudioEmitter>();
+            }
         }
 
         static private void PlaySound()
         {
             KataUtil.PlayFMODEvent("event:/gameplay/overdrive_complete", audiocomponent.Get());
-        }    
-
-        public static IEnumerator SetLaunchPanelButtonsActive(bool active, bool immediate = false)
-        {
-
-            if (immediate) yield return null;
-            else if (active) yield return new WaitForSeconds(.65f);
-            else yield return new WaitForSeconds(.3f);
-
-            if (autoSkipButtonCreated) autoSkipButton.gameObject.SetActive(active);
-            if (grindButtonCreated) grindModeButton.gameObject.SetActive(active);
-            if (instantRestartButtonCreated) instantRestartButton.gameObject.SetActive(active);
-            if (behaviorButtonCreated) behaviorButton.gameObject.SetActive(active);
-            if (grindMode && !Config.highscoreMode && allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(active);
-            else if (allowedMissCountButtonCreated) allowedMissCountButton.gameObject.SetActive(false);                             
-        }
+        }         
 
         public static void SetIntroSkipButtonActive(bool active)
         {
-            try
-            {
-                if (Config.autoSkip) skipIntroButton.SetActive(false);
-                else skipIntroButton.SetActive(active);
-            }
-            catch
-            {
-                CreateIntroSkipButton(true);
-                SetIntroSkipButtonActive(active);
-            }
+            if (!introSkipButtonCreated) return;
+            if (Config.autoSkip) skipIntroButton.SetActive(false);
+            else skipIntroButton.SetActive(active);
         }
 
         public static int GetFirstTick()
@@ -258,172 +244,22 @@ namespace AudicaModding
             else SkipIntro();
         }
 
-        public static void CreateIntroSkipButton(bool reinstantiate = false)
+        public static IEnumerator CreateIntroSkipButton(bool reinstantiate = false)
         {
-            menuButton = GameObject.FindObjectOfType<MainMenuPanel>().buttons[1];
+            if (introSkipButtonCreated) yield break;
+            while (EnvironmentLoader.I.IsSwitching()) yield return new WaitForSeconds(.5f);
+            //menuButton = GameObject.FindObjectOfType<LaunchPanel>().BackButton.gameObject;
+            string name = "menu/ShellPage_Launch/page/backParent/back";
+            menuButton = GameObject.Find(name);
+            if (menuButton is null)
+            {
+                MelonLogger.Msg("menu button not found");
+                yield break;
+            }
             skipIntroButton = CreateButton(menuButton, "Skip Intro", OnSkipButtonShot, skipIntroButtonPos, skipintroButtonRot, skipIntroButtonScale);
-            introSkipButtonCreated = true;
+            //skipIntroButton.hideFlags |= HideFlags.DontUnloadUnusedAsset;
+            GameObject.DontDestroyOnLoad(skipIntroButton);
             SetIntroSkipButtonActive(reinstantiate);
-        }
-
-        //wait a bit, else LaunchPanel is null
-        public static IEnumerator AddLaunchPanelButtons()
-        {
-            yield return new WaitForSeconds(.6f);
-            LaunchPanel lp = GameObject.FindObjectOfType<LaunchPanel>();
-            launchButton = lp.songPreviewButton;
-            CreateLaunchPanelButtons();      
-        }
-       
-
-        public static void CreateLaunchPanelButtons()
-        {
-            #region Grind Button
-            if (!grindButtonCreated)
-            {
-                grindModeButton = UnityEngine.Object.Instantiate(launchButton);
-                grindModeButton.transform.localScale = launchPanelButtonScale;
-                UnityEngine.Object.Destroy(grindModeButton.transform.root.GetComponentInChildren<Localizer>());
-
-                TextMeshPro grindButtontext = grindModeButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                grindButtontext.text = grindMode ? "GrindMode ON" : "GrindMode OFF";
-
-                grindModeButton.SelectedAction = null;
-                grindModeButton.IsChecked = null;
-                grindModeButton.SelectedAction = new Action(() =>
-                {
-                    grindMode = !grindMode;
-                    string txt = grindMode ? "ON" : "OFF";
-                    allowedMissCountButton.gameObject.SetActive(grindMode && !Config.highscoreMode);
-                    grindModeButton.label.text = "Grind Mode " + txt;
-                });
-                grindModeButton.transform.position = new Vector3(0, 13.2f, 24.19168f);
-                grindButtonCreated = true;
-            }
-            #endregion
-            #region Auto Skip Button
-            if (!autoSkipButtonCreated)
-            {
-                autoSkipButton = UnityEngine.Object.Instantiate(launchButton);
-                autoSkipButton.transform.localScale = launchPanelButtonScale;
-                UnityEngine.Object.Destroy(autoSkipButton.transform.root.GetComponentInChildren<Localizer>());
-
-
-                TextMeshPro autoSkipButtonText = autoSkipButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                autoSkipButtonText.text = Config.autoSkip ? "AutoSkip ON" : "AutoSkip OFF";
-
-                autoSkipButton.SelectedAction = null;
-                autoSkipButton.IsChecked = null;
-                autoSkipButton.SelectedAction = new Action(() =>
-                {
-                    Config.autoSkip = !Config.autoSkip;
-                    Config.Save();
-                    string txt = "Auto Skip " + (Config.autoSkip ? "ON" : "OFF");
-                    autoSkipButton.label.text = txt;                   
-                });
-                autoSkipButton.transform.position = new Vector3(-7.317519f, 13.2f, 24.19168f);
-                autoSkipButtonCreated = true;
-            }
-            #endregion
-            #region Miss Count Button
-            if (!allowedMissCountButtonCreated)
-            {
-                allowedMissCountButton = UnityEngine.Object.Instantiate(launchButton);
-                allowedMissCountButton.transform.localScale = launchPanelButtonScale;
-                UnityEngine.Object.Destroy(allowedMissCountButton.transform.root.GetComponentInChildren<Localizer>());
-
-
-                TextMeshPro missCountButtonText = allowedMissCountButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                missCountButtonText.text = "Allowed misses: " + Config.allowedMissCount.ToString();
-
-                allowedMissCountButton.SelectedAction = null;
-                allowedMissCountButton.IsChecked = null;
-                allowedMissCountButton.SelectedAction = new Action(() =>
-                {
-                    Config.allowedMissCount += 1;
-                    Config.Save();
-                    if (Config.allowedMissCount > 10) Config.allowedMissCount = 0;
-                    string txt = "Allowed Misses: " + Config.allowedMissCount.ToString();
-                    allowedMissCountButton.label.text = txt;
-                   
-                    
-                });
-                allowedMissCountButton.transform.position = new Vector3(7.317519f, 13.2f, 24.19168f);
-                allowedMissCountButton.gameObject.SetActive(false);
-                allowedMissCountButtonCreated = true;
-            }
-            #endregion
-            #region Behavior Button
-            if (!behaviorButtonCreated)
-            {
-                behaviorButton = UnityEngine.Object.Instantiate(launchButton);
-                behaviorButton.transform.localScale = launchPanelButtonScale;
-                UnityEngine.Object.Destroy(behaviorButton.transform.root.GetComponentInChildren<Localizer>());
-
-                TextMeshPro behaviorButtonText = behaviorButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                behaviorButtonText.text = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-
-                behaviorButton.SelectedAction = null;
-                behaviorButton.IsChecked = null;
-                behaviorButton.SelectedAction = new Action(() =>
-                {
-                    Config.highscoreMode = !Config.highscoreMode;
-                    Config.Save();
-                    MelonLogger.Log(Config.highscoreMode.ToString());
-                    string txt = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-                    allowedMissCountButton.gameObject.SetActive(!Config.highscoreMode && grindMode);
-                    behaviorButton.label.text = txt;
-                   
-                });
-                behaviorButton.transform.position = new Vector3(0, 15.2f, 24.19168f);
-                behaviorButtonCreated = true;
-            }
-            #endregion
-            #region Instant Restart Button
-            if (!instantRestartButtonCreated)
-            {
-                instantRestartButton = UnityEngine.Object.Instantiate(launchButton);
-                instantRestartButton.transform.localScale = launchPanelButtonScale;
-                UnityEngine.Object.Destroy(instantRestartButton.transform.root.GetComponentInChildren<Localizer>());
-
-
-                TextMeshPro instantSkipButtonText = instantRestartButton.transform.root.GetComponentInChildren<TextMeshPro>();
-                instantSkipButtonText.text = Config.showStats ? "Show Stats ON" : "Show Stats OFF";
-
-                instantRestartButton.SelectedAction = null;
-                instantRestartButton.IsChecked = null;
-                instantRestartButton.SelectedAction = new Action(() =>
-                {
-                    Config.showStats = !Config.showStats;
-                    Config.Save();
-                    string txt = "Show Stats " + (Config.showStats ? "ON" : "OFF");
-                    instantRestartButton.label.text = txt;                    
-                });
-                instantRestartButton.transform.position = new Vector3(-7.317519f, 15.2f, 24.19168f);
-                instantRestartButtonCreated = true;
-            }
-            #endregion
-            SetLaunchPanelButtonsActive(true);
-        }
-
-        public static void UpdateQuickButtons()
-        {
-            if (autoSkipButtonCreated)
-            {
-                autoSkipButton.label.text = "Auto Skip " + (Config.autoSkip ? "ON" : "OFF");
-            }
-            if (allowedMissCountButtonCreated)
-            {
-                allowedMissCountButton.label.text = "Allowed Misses: " + Config.allowedMissCount.ToString();
-            }
-            if (behaviorButtonCreated)
-            {
-                behaviorButton.label.text = Config.highscoreMode ? "Mode: Highscore" : "Mode: Standard";
-            }
-            if (instantRestartButtonCreated)
-            {
-                instantRestartButton.label.text = "Show Stats " + (Config.showStats ? "ON" : "OFF");
-            }
         }
      
         //track paused state so we can disable intro button while paused
@@ -639,8 +475,8 @@ namespace AudicaModding
             if (debug)
             {
                 int sc = currentScore + theoreticalMaxScore;
-                MelonLogger.Log("Max calculated score: " + sc.ToString());
-                MelonLogger.Log("Real max score: " + StarThresholds.I.GetMaxRawScore(SongDataHolder.I.songData.songID, KataConfig.Difficulty.Expert).ToString());
+                MelonLogger.Msg("Max calculated score: " + sc.ToString());
+                MelonLogger.Msg("Real max score: " + StarThresholds.I.GetMaxRawScore(SongDataHolder.I.songData.songID, KataConfig.Difficulty.Expert).ToString());
             }
 
             if (currentScore + theoreticalMaxScore < highscore)
@@ -671,15 +507,21 @@ namespace AudicaModding
         //decides if we are able to skip
         private static void IntroHandling()
         {
-
+            if (!introSkipButtonCreated) return;
             if (!skipQueued && !introSkipped && GetCurrentTick() < GetFirstTick() - 5760)
             {
-                if(!canSkip) canSkip = true;
-                if (!Config.autoSkip && !isPaused && !skipIntroButton.activeSelf) SetIntroSkipButtonActive(true);
+                if (!canSkip) canSkip = true;
+                if(!isPaused && !skipIntroButton.activeSelf)
+                {
+                    if (!Config.autoSkip)
+                    {
+                        SetIntroSkipButtonActive(true);
+                    }
+                }
             }
             else
             {
-                if(canSkip) canSkip = false;
+                if (canSkip) canSkip = false;
                 if (skipIntroButton.activeSelf) SetIntroSkipButtonActive(false);
             }
         }

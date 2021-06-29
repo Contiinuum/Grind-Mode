@@ -15,37 +15,35 @@ namespace AudicaModding
         
         public static void RegisterConfig()
         {
-            MelonPrefs.RegisterBool(Category, nameof(highscoreMode), false, "Highscore mode restarts a song once you can't beat your current highscore anymore. Ignores allowed miss count.");
-            MelonPrefs.RegisterBool(Category, nameof(showStats), true, "Shows stats screen after failing a song.");
-            MelonPrefs.RegisterBool(Category, nameof(includeChainSustainBreak), false, "Counts chain and sustain breaks as misses.");
-            MelonPrefs.RegisterInt(Category, nameof(allowedMissCount), 0, "How many misses you are allowed to have before restarting a song.[0, 10, 1, 0]");          
-            MelonPrefs.RegisterBool(Category, nameof(autoSkip), false, "Enables automatic skipping of song intros.");
+            MelonPreferences.CreateEntry(Category, nameof(highscoreMode), false, "Highscore mode restarts a song once you can't beat your current highscore anymore. Ignores allowed miss count.");
+            MelonPreferences.CreateEntry(Category, nameof(showStats), true, "Shows stats screen after failing a song.");
+            MelonPreferences.CreateEntry(Category, nameof(includeChainSustainBreak), false, "Counts chain and sustain breaks as misses.");
+            MelonPreferences.CreateEntry(Category, nameof(allowedMissCount), 0, "How many misses you are allowed to have before restarting a song.[0, 10, 1, 0]");
+            MelonPreferences.CreateEntry(Category, nameof(autoSkip), false, "Enables automatic skipping of song intros.");
            
 
-            OnModSettingsApplied();
+            OnPreferencesSaved();
         }
 
-        public static void OnModSettingsApplied()
+        public static void OnPreferencesSaved()
         {
             foreach (var fieldInfo in typeof(Config).GetFields(BindingFlags.Static | BindingFlags.Public))
             {
                 if (fieldInfo.Name == "Category") continue;
-                if (fieldInfo.FieldType == typeof(bool)) fieldInfo.SetValue(null, MelonPrefs.GetBool(Category, fieldInfo.Name));
-                else if (fieldInfo.FieldType == typeof(int)) fieldInfo.SetValue(null, MelonPrefs.GetInt(Category, fieldInfo.Name));
+                if (fieldInfo.FieldType == typeof(bool)) fieldInfo.SetValue(null, MelonPreferences.GetEntryValue<bool>(Category, fieldInfo.Name));
+                else if (fieldInfo.FieldType == typeof(int)) fieldInfo.SetValue(null, MelonPreferences.GetEntryValue<int>(Category, fieldInfo.Name));
             }
-            GrindMode.UpdateQuickButtons();
         }
 
         public static void Save()
         {
-            //MelonPrefs.SetBool("IntroSkip", "enabled", introSkip);
-            MelonPrefs.SetBool("GrindMode", nameof(autoSkip), autoSkip);
-            MelonPrefs.SetBool("GrindMode", nameof(includeChainSustainBreak), includeChainSustainBreak);
-            MelonPrefs.SetInt("GrindMode", nameof(allowedMissCount), allowedMissCount);
-            //MelonPrefs.SetBool("GrindMode", "quickButtons", quickButtons);
-            MelonPrefs.SetBool("GrindMode", nameof(highscoreMode), highscoreMode);
-            MelonPrefs.SetBool("GrindMode", nameof(showStats), showStats);
-            OnModSettingsApplied();
+            MelonPreferences.SetEntryValue(Category, nameof(autoSkip), autoSkip);
+            MelonPreferences.SetEntryValue(Category, nameof(includeChainSustainBreak), includeChainSustainBreak);
+            MelonPreferences.SetEntryValue(Category, nameof(allowedMissCount), allowedMissCount);
+            MelonPreferences.SetEntryValue(Category, nameof(highscoreMode), highscoreMode);
+            MelonPreferences.SetEntryValue(Category, nameof(showStats), showStats);
+            MelonPreferences.Save();
+            //OnPreferencesSaved();
            
         }
     }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Harmony;
+using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 
@@ -12,10 +12,7 @@ namespace AudicaModding
 {
     internal static class Hooks
     {
-        /*public static void ApplyHooks(HarmonyInstance instance)
-        {
-            instance.PatchAll(Assembly.GetExecutingAssembly());
-        }*/
+        private static int buttonCount = 0;
 
         //Hook to initiate intro skipping
         [HarmonyPatch(typeof(AudioDriver), "StartPlaying")]
@@ -41,12 +38,27 @@ namespace AudicaModding
             {
                 if (KataConfig.I.practiceMode) return;
 
-                if(GrindMode.grindMode && Config.highscoreMode)
+                if(GrindMode.Enabled && Config.highscoreMode)
                     GrindMode.SetCues(__instance.mCues.cues);
             }
         }
 
-        //Used mainly for creating and enabling/disabling buttons
+        [HarmonyPatch(typeof(OptionsMenu), "AddButton", new Type[] { typeof(int), typeof(string), typeof(OptionsMenuButton.SelectedActionDelegate), typeof(OptionsMenuButton.IsCheckedDelegate), typeof(string), typeof(OptionsMenuButton), })]
+        private static class AddButtonButton
+        {
+            private static void Postfix(OptionsMenu __instance, int col, string label, OptionsMenuButton.SelectedActionDelegate onSelected, OptionsMenuButton.IsCheckedDelegate isChecked)
+            {
+                if (__instance.mPage == OptionsMenu.Page.Main)
+                {
+                    buttonCount++;
+                    if (buttonCount == 9)
+                    {
+                        GrindModePanel.SetMenu(__instance);
+                    }
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(MenuState), "SetState", new Type[] { typeof(MenuState.State) })]
         private static class PatchSetMenuState
         {
@@ -62,37 +74,50 @@ namespace AudicaModding
 
             private static void Postfix(MenuState __instance, ref MenuState.State state)
             {
-                if (state == MenuState.State.LaunchPage && !GrindMode.grindButtonCreated && !GrindMode.autoSkipButtonCreated && !GrindMode.allowedMissCountButtonCreated)
+                if (state == MenuState.State.LaunchPage)
                 {
-                    MelonCoroutines.Start(GrindMode.AddLaunchPanelButtons());
-
+                    GrindModeButton.CreateGrindModeButton();
+                    MelonCoroutines.Start(GrindMode.CreateIntroSkipButton());
                 }
-                else if (GrindMode.grindButtonCreated || GrindMode.autoSkipButtonCreated)
+                else if(state == MenuState.State.SongPage)
                 {
-                    if (state == MenuState.State.LaunchPage) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(true));
-                    else if (state != MenuState.State.Launched) MelonCoroutines.Start(GrindMode.SetLaunchPanelButtonsActive(false));
+                    GrindMode.GetAudioComponent();
                 }
-                
+            }
+        }
 
-
-                if (state == MenuState.State.SongPage && GrindMode.menuButton is null) GrindMode.CreateIntroSkipButton();
-
-                if (GrindMode.introSkipButtonCreated)
-                {
-                    if (state != MenuState.State.Launched || state != MenuState.State.Launching) GrindMode.SetIntroSkipButtonActive(false);
-                    else if (state == MenuState.State.Launched && (Config.autoSkip || KataConfig.I.practiceMode)) GrindMode.SetIntroSkipButtonActive(false);
-                }
-
-                if (state == MenuState.State.Launched && !KataConfig.I.practiceMode)
-                {
-                    GrindMode.ResetVariables();
-                }
-
-                if (GrindMode.audiocomponent is null && state == MenuState.State.SongPage) GrindMode.GetAudioComponent();
-
+        [HarmonyPatch(typeof(OptionsMenu), "ShowPage", new Type[] { typeof(OptionsMenu.Page) })]
+        private static class PatchShowOptionsPage
+        {
+            private static void Prefix(OptionsMenu __instance, OptionsMenu.Page page)
+            {
+                buttonCount = 0;
             }
 
+            private static void Postfix(InGameUI __instance, OptionsMenu.Page page)
+            {
+                if (page == OptionsMenu.Page.Main)
+                {
+                    if (GrindMode.ShowPanel) GrindModePanel.GoToPanel();
+                }
+            }
         }
+
+        [HarmonyPatch(typeof(OptionsMenu), "BackOut", new Type[0])]
+        private static class Backout
+        {
+            private static bool Prefix(OptionsMenu __instance)
+            {
+                if (GrindMode.ShowPanel)
+                {
+                    GrindModePanel.Return();
+                    return false;
+                }
+                return true;
+            }
+        }
+
+
 
         [HarmonyPatch(typeof(PauseScreen), "Pause", new Type[] { typeof(bool) })]
         private static class PatchPause
@@ -161,7 +186,7 @@ namespace AudicaModding
                 if (KataConfig.I.practiceMode) return;
 
                 if (GrindMode.waitForRestart) return;
-                if(GrindMode.grindMode && Config.highscoreMode && !GrindMode.highscoreIsSetup)
+                if(GrindMode.Enabled && Config.highscoreMode && !GrindMode.highscoreIsSetup)
                     GrindMode.SetHighscore(ScoreKeeper.I.GetHighScore());
 
                 if (cue is null)
@@ -169,7 +194,7 @@ namespace AudicaModding
                     return;
                 }             
                    
-                if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
+                if (!GrindMode.Enabled || KataConfig.I.NoFail()) return;
 
                 if (Config.highscoreMode)
                 {
@@ -208,7 +233,7 @@ namespace AudicaModding
                 if (KataConfig.I.practiceMode) return;
               
 
-                if (!GrindMode.grindMode || KataConfig.I.NoFail()) return;
+                if (!GrindMode.Enabled || KataConfig.I.NoFail()) return;
 
                 if (Config.highscoreMode)
                 {
